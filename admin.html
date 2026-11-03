@@ -33,7 +33,7 @@
 
     .dashboard {
       width: 100%;
-      max-width: 800px;
+      max-width: 900px;
     }
 
     header {
@@ -208,12 +208,13 @@
           <tr>
             <th>#</th>
             <th>Full Name</th>
+            <th>Email</th>
             <th>Date Registered</th>
           </tr>
         </thead>
         <tbody id="registrantsTableBody">
           <tr>
-            <td colspan="3" class="empty-state">Loading participants...</td>
+            <td colspan="4" class="empty-state">Loading participants...</td>
           </tr>
         </tbody>
       </table>
@@ -266,7 +267,7 @@
         totalEl.innerText = 'Error';
         percentEl.innerText = 'Error';
         remainingEl.innerText = 'Error';
-        tableBody.innerHTML = `<tr><td colspan="3" class="empty-state" style="color: #dc2626;">Failed to load data. Please try refreshing.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="4" class="empty-state" style="color: #dc2626;">Failed to load data. Please try refreshing.</td></tr>`;
         document.getElementById('pageInfo').innerText = 'Page 0 of 0';
         document.getElementById('prevBtn').disabled = true;
         document.getElementById('nextBtn').disabled = true;
@@ -280,7 +281,7 @@
       const pageInfo = document.getElementById('pageInfo');
 
       if (allRegistrants.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="3" class="empty-state">No registrations yet.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="4" class="empty-state">No registrations yet.</td></tr>`;
         pageInfo.innerText = `Page 1 of 1`;
         prevBtn.disabled = true;
         nextBtn.disabled = true;
@@ -308,6 +309,7 @@
           <tr>
             <td>${globalIndex}</td>
             <td><strong>${escapeHtml(reg.fullName)}</strong></td>
+            <td>${escapeHtml(reg.email || 'N/A')}</td>
             <td>${formattedDate}</td>
           </tr>
         `;
