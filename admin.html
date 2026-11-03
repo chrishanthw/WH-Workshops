@@ -9,6 +9,7 @@
     :root {
       --primary: #2563eb;
       --primary-hover: #1d4ed8;
+      --primary-disabled: #93c5fd;
       --bg: #f8fafc;
       --card-bg: #ffffff;
       --text: #0f172a;
@@ -136,6 +137,43 @@
       padding: 3rem;
       color: #64748b;
     }
+
+    /* Pagination Bar Controls */
+    .pagination-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      background-color: var(--card-bg);
+      border-top: 1px solid var(--border);
+    }
+
+    .pagination-btn {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.4rem 0.9rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+      background-color: var(--primary-hover);
+    }
+
+    .pagination-btn:disabled {
+      background-color: var(--primary-disabled);
+      cursor: not-allowed;
+    }
+
+    .page-info {
+      font-size: 0.875rem;
+      color: #64748b;
+      font-weight: 500;
+    }
   </style>
 </head>
 <body>
@@ -179,6 +217,13 @@
           </tr>
         </tbody>
       </table>
+
+      <!-- Blue Pagination Controls -->
+      <div class="pagination-controls" id="paginationControls">
+        <button class="pagination-btn" id="prevBtn" onclick="changePage(-1)" disabled>Previous</button>
+        <span class="page-info" id="pageInfo">Page 1 of 1</span>
+        <button class="pagination-btn" id="nextBtn" onclick="changePage(1)" disabled>Next</button>
+      </div>
     </div>
   </div>
 
@@ -186,6 +231,11 @@
     // Configuration
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxhC7wW1xN_p6GhB4j5FOFUll6d7zitozdE6s2Mj4-9gaSJBv2vU2AcPE6wJfrc8pUh/exec';
     const MAX_CAPACITY = 25; // Keep matching your registration form capacity
+    const ITEMS_PER_PAGE = 5;
+
+    // Pagination State Variables
+    let allRegistrants = [];
+    let currentPage = 1;
 
     async function loadDashboardData() {
       const totalEl = document.getElementById('totalRegistrations');
@@ -198,7 +248,7 @@
         const data = await response.json();
         
         const count = data.count || 0;
-        const registrants = data.registrants || [];
+        allRegistrants = data.registrants || [];
 
         // 1. Calculate metrics
         const percentage = Math.min(100, Math.round((count / MAX_CAPACITY) * 100));
@@ -208,38 +258,72 @@
         percentEl.innerText = `${percentage}%`;
         remainingEl.innerText = remaining;
 
-        // 2. Populate Table
-        if (registrants.length === 0) {
-          tableBody.innerHTML = `<tr><td colspan="3" class="empty-state">No registrations yet.</td></tr>`;
-          return;
-        }
-
-        let rowsHtml = '';
-        registrants.forEach((reg, index) => {
-          const dateObj = new Date(reg.timestamp);
-          const formattedDate = isNaN(dateObj) ? reg.timestamp : dateObj.toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-          });
-
-          rowsHtml += `
-            <tr>
-              <td>${index + 1}</td>
-              <td><strong>${escapeHtml(reg.fullName)}</strong></td>
-              <td>${formattedDate}</td>
-            </tr>
-          `;
-        });
-
-        tableBody.innerHTML = rowsHtml;
+        // Reset to initial page and render
+        currentPage = 1;
+        renderTablePage();
 
       } catch (err) {
         totalEl.innerText = 'Error';
         percentEl.innerText = 'Error';
         remainingEl.innerText = 'Error';
         tableBody.innerHTML = `<tr><td colspan="3" class="empty-state" style="color: #dc2626;">Failed to load data. Please try refreshing.</td></tr>`;
+        document.getElementById('pageInfo').innerText = 'Page 0 of 0';
+        document.getElementById('prevBtn').disabled = true;
+        document.getElementById('nextBtn').disabled = true;
       }
+    }
+
+    function renderTablePage() {
+      const tableBody = document.getElementById('registrantsTableBody');
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      const pageInfo = document.getElementById('pageInfo');
+
+      if (allRegistrants.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="3" class="empty-state">No registrations yet.</td></tr>`;
+        pageInfo.innerText = `Page 1 of 1`;
+        prevBtn.disabled = true;
+        nextBtn.disabled = true;
+        return;
+      }
+
+      const totalPages = Math.ceil(allRegistrants.length / ITEMS_PER_PAGE);
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+      const pageItems = allRegistrants.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+      let rowsHtml = '';
+      pageItems.forEach((reg, index) => {
+        const globalIndex = startIndex + index + 1;
+        const dateObj = new Date(reg.timestamp);
+        const formattedDate = isNaN(dateObj) ? reg.timestamp : dateObj.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+
+        rowsHtml += `
+          <tr>
+            <td>${globalIndex}</td>
+            <td><strong>${escapeHtml(reg.fullName)}</strong></td>
+            <td>${formattedDate}</td>
+          </tr>
+        `;
+      });
+
+      tableBody.innerHTML = rowsHtml;
+
+      // Update Pagination UI
+      pageInfo.innerText = `Page ${currentPage} of ${totalPages}`;
+      prevBtn.disabled = currentPage === 1;
+      nextBtn.disabled = currentPage === totalPages;
+    }
+
+    function changePage(direction) {
+      currentPage += direction;
+      renderTablePage();
     }
 
     // Helper to prevent injection
