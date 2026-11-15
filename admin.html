@@ -91,23 +91,25 @@
       margin-bottom: 0.5rem;
     }
 
+    /* Larger font size for 1st and 3rd cards */
     .metric-value {
-      font-size: 1.75rem;
+      font-size: 2.25rem;
       font-weight: 700;
       color: var(--text);
+      line-height: 1.2;
     }
 
-    /* Gauge Styles */
+    /* Gauge Styles (Height reduced to 80%) */
     .gauge-container {
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin-top: 0.25rem;
+      margin-top: -0.25rem;
     }
 
     .gauge-svg {
-      width: 160px;
-      height: 85px;
+      width: 130px;
+      height: 68px; /* 80% of previous height */
       overflow: visible;
     }
 
@@ -118,10 +120,10 @@
     }
 
     .gauge-text {
-      font-size: 1.35rem;
+      font-size: 1.2rem;
       font-weight: 700;
       color: var(--text);
-      margin-top: -4px;
+      margin-top: -2px;
     }
 
     /* Registrants Table Section */
