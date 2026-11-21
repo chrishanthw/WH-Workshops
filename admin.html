@@ -528,26 +528,46 @@
     }
 
     function extractRegistrantEmail(reg) {
-      if (!reg || typeof reg !== 'object') return '';
-      const candidates = [
-        reg.email,
-        reg.Email,
-        reg.emailAddress,
-        reg.email_address,
-        reg['Email Address'],
-        reg.contactEmail
+      if (!reg) return '';
+      if (typeof reg === 'string') {
+        const match = reg.match(/[^\s@]+@[^\s@]+\.[^\s@]+/);
+        return match ? match[0].trim() : '';
+      }
+      if (typeof reg !== 'object') return '';
+
+      const priorityKeys = [
+        'email',
+        'Email',
+        'emailAddress',
+        'email_address',
+        'Email Address',
+        'contactEmail',
+        'userEmail'
       ];
-      for (const val of candidates) {
-        if (typeof val === 'string' && val.trim()) {
-          return val.trim();
+      for (const key of priorityKeys) {
+        if (typeof reg[key] === 'string' && reg[key].trim()) {
+          return reg[key].trim();
         }
       }
-      // Fallback: check any object key containing "email"
+
+      // Check any key mentioning "email" or "mail"
       for (const [key, val] of Object.entries(reg)) {
-        if (/email/i.test(key) && typeof val === 'string' && val.trim()) {
+        if (/email|mail/i.test(key) && typeof val === 'string' && val.trim()) {
           return val.trim();
         }
       }
+
+      // Deep scan any string/nested fields for an email address
+      for (const val of Object.values(reg)) {
+        if (typeof val === 'string') {
+          const match = val.match(/[^\s@]+@[^\s@]+\.[^\s@]+/);
+          if (match) return match[0].trim();
+        } else if (val && typeof val === 'object') {
+          const nested = extractRegistrantEmail(val);
+          if (nested) return nested;
+        }
+      }
+
       return '';
     }
 
