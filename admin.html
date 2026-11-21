@@ -234,10 +234,17 @@
     }
 
     @media print {
-      body {
+      @page {
+        size: letter portrait;
+        margin: 0.45in;
+      }
+
+      html, body {
         background: #ffffff;
         color: #000000;
         padding: 0;
+        margin: 0;
+        height: 100%;
         display: block;
       }
 
@@ -246,38 +253,47 @@
       }
 
       .printable-attendance {
-        display: block;
+        display: flex;
+        flex-direction: column;
         width: 100%;
-        padding: 0.5rem;
+        min-height: 20.1in; /* Spans two Letter pages (~10.05in each inside 0.45in margins) */
       }
 
       .print-header {
-        margin-bottom: 1.25rem;
+        margin-bottom: 0.75rem;
         border-bottom: 2px solid #0f172a;
-        padding-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+        flex-shrink: 0;
       }
 
       .print-header h1 {
-        font-size: 1.5rem;
-        margin-bottom: 0.25rem;
+        font-size: 1.35rem;
+        margin-bottom: 0.2rem;
       }
 
       .print-meta {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         color: #475569;
       }
 
       .attendance-table {
         width: 100%;
+        flex: 1 1 auto;
         border-collapse: collapse;
+        table-layout: fixed;
+      }
+
+      .attendance-table thead {
+        display: table-header-group;
       }
 
       .attendance-table th,
       .attendance-table td {
         border: 1px solid #334155;
-        padding: 0.65rem 0.9rem;
-        font-size: 1rem;
-        height: 2.2rem;
+        padding: 0.42rem 0.7rem;
+        font-size: 0.92rem;
+        line-height: 1.25;
+        word-break: break-word;
       }
 
       .attendance-table th {
@@ -288,14 +304,22 @@
       }
 
       .check-col {
-        width: 64px;
+        width: 62px;
         text-align: center;
+      }
+
+      .name-col {
+        width: 47%;
+      }
+
+      .email-col {
+        width: 45%;
       }
 
       .checkbox-square {
         display: inline-block;
-        width: 18px;
-        height: 18px;
+        width: 16px;
+        height: 16px;
         border: 2px solid #0f172a;
         border-radius: 3px;
         vertical-align: middle;
@@ -387,12 +411,13 @@
       <thead>
         <tr>
           <th class="check-col">Present</th>
-          <th>Full Name</th>
+          <th class="name-col">Full Name</th>
+          <th class="email-col">Email</th>
         </tr>
       </thead>
       <tbody id="attendanceTableBody">
         <tr>
-          <td colspan="2" class="empty-state">No participants available.</td>
+          <td colspan="3" class="empty-state">No participants available.</td>
         </tr>
       </tbody>
     </table>
@@ -403,7 +428,7 @@
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxhC7wW1xN_p6GhB4j5FOFUll6d7zitozdE6s2Mj4-9gaSJBv2vU2AcPE6wJfrc8pUh/exec';
     const MAX_CAPACITY = 25; // Keep matching your registration form capacity
     const ITEMS_PER_PAGE = 5;
-    const WALKIN_ROWS_COUNT = 8; // Blank sign-up lines below registered attendees
+    const MIN_TWO_PAGE_ROWS = 50; // Enough rows to span and fill down to the bottom of page 2
 
     // Pagination State Variables
     let allRegistrants = [];
@@ -446,7 +471,7 @@
         remainingEl.innerText = 'Error';
         needleEl.style.transform = 'rotate(-90deg)';
         tableBody.innerHTML = `<tr><td colspan="3" class="empty-state" style="color: #dc2626;">Failed to load data. Please try refreshing.</td></tr>`;
-        document.getElementById('attendanceTableBody').innerHTML = `<tr><td colspan="2" class="empty-state">Unable to load registrants for attendance sheet.</td></tr>`;
+        document.getElementById('attendanceTableBody').innerHTML = `<tr><td colspan="3" class="empty-state">Unable to load registrants for attendance sheet.</td></tr>`;
         document.getElementById('pageInfo').innerText = 'Page 0 of 0';
         document.getElementById('prevBtn').disabled = true;
         document.getElementById('nextBtn').disabled = true;
@@ -501,6 +526,31 @@
       nextBtn.disabled = currentPage === totalPages;
     }
 
+    function maskEmail(email) {
+      if (!email || typeof email !== 'string') return '';
+      const trimmed = email.trim();
+      const atIndex = trimmed.indexOf('@');
+      if (atIndex <= 0) {
+        return '*'.repeat(Math.max(3, trimmed.length));
+      }
+
+      const localPart = trimmed.slice(0, atIndex);
+      const domainPart = trimmed.slice(atIndex + 1);
+      const dotIndex = domainPart.lastIndexOf('.');
+
+      const visibleLocal = localPart.slice(0, 1);
+      const maskedLocal = '*'.repeat(Math.max(3, localPart.length - 1));
+
+      if (dotIndex > 0) {
+        const domainName = domainPart.slice(0, dotIndex);
+        const tld = domainPart.slice(dotIndex);
+        const maskedDomain = '*'.repeat(Math.max(2, domainName.length));
+        return `${visibleLocal}${maskedLocal}@${maskedDomain}${tld}`;
+      }
+
+      return `${visibleLocal}${maskedLocal}@${'*'.repeat(Math.max(3, domainPart.length))}`;
+    }
+
     function renderAttendanceSheet() {
       const attendanceBody = document.getElementById('attendanceTableBody');
       const printMeta = document.getElementById('printMeta');
@@ -509,30 +559,32 @@
         String(a.fullName || '').localeCompare(String(b.fullName || ''), undefined, { sensitivity: 'base' })
       );
 
+      const emptyRowsNeeded = Math.max(6, MIN_TWO_PAGE_ROWS - sortedRegistrants.length);
+
       const printedDate = new Date().toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
         year: 'numeric'
       });
-      printMeta.innerText = `Registered: ${sortedRegistrants.length} (+${WALKIN_ROWS_COUNT} walk-in lines) • Sorted Alphabetically • Printed ${printedDate}`;
+      printMeta.innerText = `Registered: ${sortedRegistrants.length} (+${emptyRowsNeeded} open lines) • Sorted Alphabetically • Printed ${printedDate}`;
 
       const registrantRowsHtml = sortedRegistrants.map((reg) => `
         <tr>
           <td class="check-col"><span class="checkbox-square" aria-hidden="true"></span></td>
-          <td>${escapeHtml(reg.fullName)}</td>
+          <td class="name-col">${escapeHtml(reg.fullName)}</td>
+          <td class="email-col">${escapeHtml(maskEmail(reg.email))}</td>
         </tr>
       `).join('');
 
-      const walkInRowsHtml = Array.from({ length: WALKIN_ROWS_COUNT }, () => `
+      const blankRowsHtml = Array.from({ length: emptyRowsNeeded }, () => `
         <tr>
           <td class="check-col"><span class="checkbox-square" aria-hidden="true"></span></td>
-          <td></td>
+          <td class="name-col"></td>
+          <td class="email-col"></td>
         </tr>
       `).join('');
 
-      attendanceBody.innerHTML = (registrantRowsHtml + walkInRowsHtml) || `
-        <tr><td colspan="2" class="empty-state">No rows available.</td></tr>
-      `;
+      attendanceBody.innerHTML = registrantRowsHtml + blankRowsHtml;
     }
 
     function openAttendancePrintView() {
