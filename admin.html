@@ -290,7 +290,7 @@
       .attendance-table th,
       .attendance-table td {
         border: 1px solid #334155;
-        padding: 0.42rem 0.7rem;
+        padding: 0.42rem 0.65rem;
         font-size: 0.92rem;
         line-height: 1.25;
         word-break: break-word;
@@ -304,16 +304,17 @@
       }
 
       .check-col {
-        width: 62px;
+        width: 84px;
         text-align: center;
+        white-space: nowrap;
       }
 
       .name-col {
-        width: 47%;
+        width: 46%;
       }
 
       .email-col {
-        width: 45%;
+        width: 44%;
       }
 
       .checkbox-square {
@@ -526,6 +527,30 @@
       nextBtn.disabled = currentPage === totalPages;
     }
 
+    function extractRegistrantEmail(reg) {
+      if (!reg || typeof reg !== 'object') return '';
+      const candidates = [
+        reg.email,
+        reg.Email,
+        reg.emailAddress,
+        reg.email_address,
+        reg['Email Address'],
+        reg.contactEmail
+      ];
+      for (const val of candidates) {
+        if (typeof val === 'string' && val.trim()) {
+          return val.trim();
+        }
+      }
+      // Fallback: check any object key containing "email"
+      for (const [key, val] of Object.entries(reg)) {
+        if (/email/i.test(key) && typeof val === 'string' && val.trim()) {
+          return val.trim();
+        }
+      }
+      return '';
+    }
+
     function maskEmail(email) {
       if (!email || typeof email !== 'string') return '';
       const trimmed = email.trim();
@@ -568,13 +593,16 @@
       });
       printMeta.innerText = `Registered: ${sortedRegistrants.length} (+${emptyRowsNeeded} open lines) • Sorted Alphabetically • Printed ${printedDate}`;
 
-      const registrantRowsHtml = sortedRegistrants.map((reg) => `
-        <tr>
-          <td class="check-col"><span class="checkbox-square" aria-hidden="true"></span></td>
-          <td class="name-col">${escapeHtml(reg.fullName)}</td>
-          <td class="email-col">${escapeHtml(maskEmail(reg.email))}</td>
-        </tr>
-      `).join('');
+      const registrantRowsHtml = sortedRegistrants.map((reg) => {
+        const rawEmail = extractRegistrantEmail(reg);
+        return `
+          <tr>
+            <td class="check-col"><span class="checkbox-square" aria-hidden="true"></span></td>
+            <td class="name-col">${escapeHtml(reg.fullName)}</td>
+            <td class="email-col">${escapeHtml(maskEmail(rawEmail))}</td>
+          </tr>
+        `;
+      }).join('');
 
       const blankRowsHtml = Array.from({ length: emptyRowsNeeded }, () => `
         <tr>
