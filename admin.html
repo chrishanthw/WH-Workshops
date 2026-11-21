@@ -405,7 +405,7 @@
   <!-- Printable Physical Attendance Sheet -->
   <section class="printable-attendance" id="printableAttendance" aria-label="Printable Attendance Sheet">
     <div class="print-header">
-      <h1>Workshop Physical Attendance Sheet</h1>
+      <h1>Workshop Attendance Sheet</h1>
       <div class="print-meta" id="printMeta">Sorted Alphabetically by Full Name</div>
     </div>
     <table class="attendance-table">
@@ -611,7 +611,7 @@
         day: 'numeric',
         year: 'numeric'
       });
-      printMeta.innerText = `Registered: ${sortedRegistrants.length} (+${emptyRowsNeeded} open lines) • Sorted Alphabetically • Printed ${printedDate}`;
+      printMeta.innerText = `Registered: ${sortedRegistrants.length} • Printed ${printedDate}`;
 
       const registrantRowsHtml = sortedRegistrants.map((reg) => {
         const rawEmail = extractRegistrantEmail(reg);
