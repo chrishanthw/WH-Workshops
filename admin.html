@@ -277,6 +277,7 @@
         border: 1px solid #334155;
         padding: 0.65rem 0.9rem;
         font-size: 1rem;
+        height: 2.2rem;
       }
 
       .attendance-table th {
@@ -402,6 +403,7 @@
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxhC7wW1xN_p6GhB4j5FOFUll6d7zitozdE6s2Mj4-9gaSJBv2vU2AcPE6wJfrc8pUh/exec';
     const MAX_CAPACITY = 25; // Keep matching your registration form capacity
     const ITEMS_PER_PAGE = 5;
+    const WALKIN_ROWS_COUNT = 8; // Blank sign-up lines below registered attendees
 
     // Pagination State Variables
     let allRegistrants = [];
@@ -503,13 +505,7 @@
       const attendanceBody = document.getElementById('attendanceTableBody');
       const printMeta = document.getElementById('printMeta');
 
-      if (!allRegistrants || allRegistrants.length === 0) {
-        attendanceBody.innerHTML = `<tr><td colspan="2" class="empty-state">No registered attendees to print.</td></tr>`;
-        printMeta.innerText = 'Total Attendees: 0 • Sorted Alphabetically';
-        return;
-      }
-
-      const sortedRegistrants = [...allRegistrants].sort((a, b) =>
+      const sortedRegistrants = [...(allRegistrants || [])].sort((a, b) =>
         String(a.fullName || '').localeCompare(String(b.fullName || ''), undefined, { sensitivity: 'base' })
       );
 
@@ -518,16 +514,25 @@
         day: 'numeric',
         year: 'numeric'
       });
-      printMeta.innerText = `Total Attendees: ${sortedRegistrants.length} • Sorted Alphabetically • Printed ${printedDate}`;
+      printMeta.innerText = `Registered: ${sortedRegistrants.length} (+${WALKIN_ROWS_COUNT} walk-in lines) • Sorted Alphabetically • Printed ${printedDate}`;
 
-      const rowsHtml = sortedRegistrants.map((reg) => `
+      const registrantRowsHtml = sortedRegistrants.map((reg) => `
         <tr>
           <td class="check-col"><span class="checkbox-square" aria-hidden="true"></span></td>
           <td>${escapeHtml(reg.fullName)}</td>
         </tr>
       `).join('');
 
-      attendanceBody.innerHTML = rowsHtml;
+      const walkInRowsHtml = Array.from({ length: WALKIN_ROWS_COUNT }, () => `
+        <tr>
+          <td class="check-col"><span class="checkbox-square" aria-hidden="true"></span></td>
+          <td></td>
+        </tr>
+      `).join('');
+
+      attendanceBody.innerHTML = (registrantRowsHtml + walkInRowsHtml) || `
+        <tr><td colspan="2" class="empty-state">No rows available.</td></tr>
+      `;
     }
 
     function openAttendancePrintView() {
